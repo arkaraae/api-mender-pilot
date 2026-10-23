@@ -1,30 +1,171 @@
-name: Verify live Quote API consumer
+name: Watch and repair the live Quote API consumer
 on:
   push:
     branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '17 * * * *'
-permissions:
-  contents: write
+
+concurrency:
+  group: quote-api-watch
+  cancel-in-progress: false
+
 jobs:
-  verify:
+  detect:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      repair_needed: ${{ steps.check.outputs.repair_needed }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - name: Sync published OpenAPI contract
-        run: npm run sync-contract
-      - name: Commit a changed contract for Mender to observe
+      - name: Compare the stored contract with the live published contract
+        id: check
+        shell: bash
         run: |
-          if ! git diff --quiet -- openapi.json; then
+          set -euo pipefail
+          mkdir -p artifacts
+          cp openapi.json artifacts/before.json
+          npm run sync-contract
+          cp openapi.json artifacts/after.json
+          if git diff --quiet -- openapi.json; then
+            changed=false
+          else
+            changed=true
+          fi
+          if PILOT_LIVE=1 npm test > artifacts/baseline-test.log 2>&1; then
+            passed=true
+          else
+            passed=false
+          fi
+          cat artifacts/baseline-test.log
+          if [[ "$changed" == true ]]; then
             git config user.name 'API Mender Pilot'
             git config user.email 'pilot@users.noreply.github.com'
             git add openapi.json
             git commit -m 'Sync published Quote API contract'
             git push
           fi
-      - name: Verify the consumer against the live API
-        run: PILOT_LIVE=1 npm test
+          if [[ "$passed" == true ]]; then
+            echo 'repair_needed=false' >> "$GITHUB_OUTPUT"
+          elif [[ "$changed" == true ]] && grep -q 'Quote API returned 422' artifacts/baseline-test.log; then
+            echo 'repair_needed=true' >> "$GITHUB_OUTPUT"
+            echo 'The old consumer failed against the new live API. A repair will be proposed.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'The consumer failed without a supported contract break.' >&2
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.repair_needed == 'true'
+        with:
+          name: contract-break
+          path: |
+            artifacts/before.json
+            artifacts/after.json
+            artifacts/baseline-test.log
+          if-no-files-found: error
+
+  propose:
+    needs: detect
+    if: needs.detect.outputs.repair_needed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: arkaraae/api-mender
+          ref: f229cc88ec159158b6329ec2afc996e68b5afbd3
+          path: engine
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: contract-break
+          path: artifacts
+      - name: Generate a bounded source edit
+        env:
+          MENDER_ENGINE_ROOT: ${{ github.workspace }}/engine
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/generate-fix.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proposed-repair
+          path: |
+            artifacts/proposed-client.mjs
+            artifacts/repair.json
+          if-no-files-found: error
+
+  validate:
+    needs: propose
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: contract-break
+          path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: proposed-repair
+          path: artifacts
+      - name: Prove the source edit against the new contract and live API
+        run: |
+          cp artifacts/after.json openapi.json
+          cp artifacts/proposed-client.mjs src/client.mjs
+          node --check src/client.mjs
+          PILOT_LIVE=1 npm test
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          name: proposed-repair
+          path: artifacts
+      - name: Open a draft pull request for the verified repair
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -b "mender/quote-repair-${GITHUB_RUN_ID}"
+          cp artifacts/proposed-client.mjs src/client.mjs
+          git add src/client.mjs
+          git config user.name 'API Mender Pilot'
+          git config user.email 'pilot@users.noreply.github.com'
+          git commit -m 'Repair Quote API consumer for updated contract'
+          git push -u origin HEAD
+          cat > /tmp/mender-pr-body.md <<EOF
+          ## API Mender repair
+
+          The published Quote API contract changed. The old consumer failed with HTTP 422.
+          Mender proposed a bounded request edit. The updated client then passed its contract test and a live request to the database-backed API.
+
+          [Detection, repair, and validation run](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})
+
+          Review this change before merging. No customer code was changed automatically.
+          EOF
+          gh pr create --draft --base main --head "$(git branch --show-current)" --title 'Repair Quote API consumer after contract change' --body-file /tmp/mender-pr-body.md
