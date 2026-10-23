@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "API Mender Managed Quote API",
-    "version": "1.0.0",
-    "description": "Initial public contract"
+    "version": "2.0.0",
+    "description": "Pilot v2: required request identity renamed from customerId to accountId for the live API Mender repair check."
   },
   "paths": {
     "/api/managed/quotes": {
@@ -16,11 +16,11 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "customerId",
+                  "accountId",
                   "sku"
                 ],
                 "properties": {
-                  "customerId": {
+                  "accountId": {
                     "type": "string"
                   },
                   "sku": {
