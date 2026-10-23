@@ -1,0 +1,52 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "API Mender Managed Quote API",
+    "version": "1.0.0",
+    "description": "Initial public contract"
+  },
+  "servers": [{ "url": "https://apimender.com" }],
+  "paths": {
+    "/api/managed/quotes": {
+      "post": {
+        "operationId": "createManagedQuote",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["customerId", "sku"],
+                "properties": {
+                  "customerId": { "type": "string" },
+                  "sku": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Quote created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["id", "sku", "amountCents", "contractVersion"],
+                  "properties": {
+                    "id": { "type": "string" },
+                    "sku": { "type": "string" },
+                    "amountCents": { "type": "integer" },
+                    "contractVersion": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Product not found" },
+          "422": { "description": "Request does not match the published contract" }
+        }
+      }
+    }
+  }
+}
