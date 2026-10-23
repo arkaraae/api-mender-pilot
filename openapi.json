@@ -5,7 +5,6 @@
     "version": "1.0.0",
     "description": "Initial public contract"
   },
-  "servers": [{ "url": "https://apimender.com" }],
   "paths": {
     "/api/managed/quotes": {
       "post": {
@@ -16,10 +15,17 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["customerId", "sku"],
+                "required": [
+                  "customerId",
+                  "sku"
+                ],
                 "properties": {
-                  "customerId": { "type": "string" },
-                  "sku": { "type": "string" }
+                  "customerId": {
+                    "type": "string"
+                  },
+                  "sku": {
+                    "type": "string"
+                  }
                 }
               }
             }
@@ -32,21 +38,43 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["id", "sku", "amountCents", "contractVersion"],
+                  "required": [
+                    "id",
+                    "sku",
+                    "amountCents",
+                    "contractVersion"
+                  ],
                   "properties": {
-                    "id": { "type": "string" },
-                    "sku": { "type": "string" },
-                    "amountCents": { "type": "integer" },
-                    "contractVersion": { "type": "integer" }
+                    "id": {
+                      "type": "string"
+                    },
+                    "sku": {
+                      "type": "string"
+                    },
+                    "amountCents": {
+                      "type": "integer"
+                    },
+                    "contractVersion": {
+                      "type": "integer"
+                    }
                   }
                 }
               }
             }
           },
-          "404": { "description": "Product not found" },
-          "422": { "description": "Request does not match the published contract" }
+          "404": {
+            "description": "Product not found"
+          },
+          "422": {
+            "description": "Request does not match the published contract"
+          }
         }
       }
     }
-  }
+  },
+  "servers": [
+    {
+      "url": "https://apimender.com"
+    }
+  ]
 }
