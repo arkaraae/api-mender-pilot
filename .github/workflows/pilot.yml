@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: arkaraae/api-mender
-          ref: f229cc88ec159158b6329ec2afc996e68b5afbd3
+          ref: 55beb58edc5b7ed1233c8b222de584991c278147
           path: engine
           persist-credentials: false
       - uses: actions/setup-node@v5
