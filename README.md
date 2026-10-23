@@ -31,8 +31,8 @@ PILOT_LIVE=1 npm test
 npm run sync-contract
 ```
 
-The current live API is v1, so the real change-detection and draft-PR path has
-not run yet. A local v2 contract preflight showed the old caller failing and the
-Mender edit passing the same request-shape check. Opening the draft PR also
-requires the repository's GitHub Actions PR-creation setting. This pilot is a
-specific Quote API integration, not the deployed general customer scan worker.
+The live API now publishes v2 and requires `accountId`. The checked-in caller
+still sends `customerId`; its live request test should fail with HTTP 422 until
+the proposed repair is reviewed. API Mender's isolated staging scanner watches
+this repository and its `openapi.json` contract. This pilot is a specific Quote
+API integration, not the deployed general customer scan worker.
