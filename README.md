@@ -36,3 +36,5 @@ still sends `customerId`; its live request test should fail with HTTP 422 until
 the proposed repair is reviewed. API Mender's isolated staging scanner watches
 this repository and its `openapi.json` contract. This pilot is a specific Quote
 API integration, not the deployed general customer scan worker.
+
+Staging scanner check: compare complete literal JSON request keys with the current OpenAPI required fields, then review any missing keys as static findings.
