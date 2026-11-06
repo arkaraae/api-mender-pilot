@@ -22,4 +22,4 @@ jobs:
       - uses: arkaraae/api-mender/.github/actions/mender-repair-proof@fe445c6dcb90e3558280d72547211ca337f52a14
         with:
           test-command: npm test
-          expected-before-output: Expected values to be strictly deep-equal
+          expected-before-output: accountId required

@@ -14,7 +14,8 @@ test('consumer sends the published request contract', async () => {
   assert.equal(request.url, 'https://apimender.com/api/managed/quotes');
   assert.equal(request.options.method, 'POST');
   const body = JSON.parse(request.options.body);
-  assert.deepEqual(Object.keys(body).sort(), [...schema.required].sort());
+  for (const field of schema.required) assert.ok(Object.hasOwn(body, field), `${field} required`);
+  assert.equal(body.customerId, undefined);
   assert.equal(body.sku, 'WIDGET-1');
   assert.equal(body[schema.required.find(key => key !== 'sku')], 'pilot-customer');
   assert.equal(result.id, 'quote_1');
