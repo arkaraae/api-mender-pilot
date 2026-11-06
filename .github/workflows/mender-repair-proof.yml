@@ -1,0 +1,25 @@
+name: Mender repair proof
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  mender-repair-proof:
+    if: startsWith(github.event.pull_request.head.ref, 'mender/repair-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: arkaraae/api-mender/.github/actions/mender-repair-proof@fe445c6dcb90e3558280d72547211ca337f52a14
+        with:
+          test-command: npm test
+          expected-before-output: Expected values to be strictly deep-equal
