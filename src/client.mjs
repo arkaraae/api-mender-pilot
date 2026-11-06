@@ -4,7 +4,7 @@ export async function createQuote(customerId, sku = 'WIDGET-1', fetch = globalTh
   const response = await fetch('https://apimender.com/api/managed/quotes', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ customerId, metadata: 'pilot', sku }),
+    body: JSON.stringify({ accountId: customerId, metadata: 'pilot', sku }),
   });
   const body = await response.json();
   if (!response.ok) throw new Error(`Quote API returned ${response.status}: ${JSON.stringify(body)}`);
